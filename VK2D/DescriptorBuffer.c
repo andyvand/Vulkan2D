@@ -10,6 +10,8 @@
 #include "VK2D/PhysicalDevice.h"
 #include "VK2D/Opaque.h"
 
+#include <stdlib.h>
+
 static _VK2DDescriptorBufferInternal *_vk2dDescriptorBufferAppendBuffer(VK2DDescriptorBuffer db) {
 	VK2DRenderer gRenderer = vk2dRendererGetPointer();
     if (vk2dStatusFatal() || gRenderer == NULL)

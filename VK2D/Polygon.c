@@ -5,7 +5,17 @@
 #include "VK2D/Validation.h"
 #include "VK2D/Renderer.h"
 #include "VK2D/Opaque.h"
+
+#ifndef __APPLE__
 #include <malloc.h>
+#else
+#include <sys/cdefs.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <malloc/_malloc.h>
+#include <malloc/malloc.h>
+#include <memory.h>
+#endif
 
 VK2DPolygon _vk2dPolygonCreate(VK2DLogicalDevice dev, void *data, uint32_t size, VK2DVertexType type) {
 	VK2DPolygon poly = malloc(sizeof(struct VK2DPolygon_t));

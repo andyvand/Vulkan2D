@@ -232,7 +232,8 @@ struct VK2DRenderer_t {
 	VK2DUniformBufferObject workingUBO;                           ///< This frame's ubo, basically just has VK2D_MAX_CAMERAS viewproj matricies
 
 	// KHR Surface
-	SDL_Window *window;                           ///< Window this renderer belongs to
+	//SDL_Window *window;                         ///< Window this renderer belongs to
+    void *window;                                 ///< Window this renderer belongs to
 	VkSurfaceKHR surface;                         ///< Window surface
 	VkSurfaceCapabilitiesKHR surfaceCapabilities; ///< Capabilities of the surface
 	VkPresentModeKHR *presentModes;               ///< All available present modes

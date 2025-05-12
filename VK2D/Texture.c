@@ -12,7 +12,17 @@
 #include "VK2D/stb_image.h"
 #include "VK2D/Opaque.h"
 #include "VK2D/Util.h"
+
+#ifndef __APPLE__
 #include <malloc.h>
+#else
+#include <sys/cdefs.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <malloc/_malloc.h>
+#include <malloc/malloc.h>
+#include <memory.h>
+#endif
 
 static void _vk2dTextureAddToTextureArray(VK2DTexture tex) {
     VK2DRenderer gRenderer = vk2dRendererGetPointer();

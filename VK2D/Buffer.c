@@ -4,7 +4,18 @@
 #include "VK2D/LogicalDevice.h"
 #include "VK2D/Validation.h"
 #include "VK2D/Initializers.h"
+
+#ifndef __APPLE__
 #include <malloc.h>
+#else
+#include <sys/cdefs.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <malloc/_malloc.h>
+#include <malloc/malloc.h>
+#include <memory.h>
+#endif
+
 #include "VK2D/Renderer.h"
 #include "VK2D/Opaque.h"
 
@@ -13,7 +24,7 @@ VK2DBuffer vk2dBufferCreate(VK2DLogicalDevice dev, VkDeviceSize size, VkBufferUs
 	if (gRenderer == NULL || vk2dStatusFatal())
 	    return NULL;
 
-	VK2DBuffer buf = malloc(sizeof(struct VK2DBuffer_t));
+	VK2DBuffer buf = (VK2DBuffer)malloc(sizeof(struct VK2DBuffer_t));
 
 	if (buf != NULL) {
 		buf->dev = dev;
@@ -25,11 +36,11 @@ VK2DBuffer vk2dBufferCreate(VK2DLogicalDevice dev, VkDeviceSize size, VkBufferUs
 		VkResult result = vmaCreateBuffer(gRenderer->vma, &bufferCreateInfo, &allocationCreateInfo, &buf->buf, &buf->mem, VK_NULL_HANDLE);
 		if (result == VK_ERROR_OUT_OF_DEVICE_MEMORY) {
             vk2dRaise(VK2D_STATUS_OUT_OF_VRAM, "VMA out of video memory for buffer of size %0.2fkb.", (float)size / 1024.0f);
-            free(buf);
+            free((void *)buf);
             buf = NULL;
 		} else if (result != VK_SUCCESS) {
             vk2dRaise(VK2D_STATUS_VULKAN_ERROR, "Failed to allocate buffer of size %0.2fkb.", (float)size / 1024.0f);
-            free(buf);
+            free((void *)buf);
             buf = NULL;
 		}
 	} else {
@@ -135,6 +146,6 @@ void vk2dBufferFree(VK2DBuffer buf) {
         return;
 	if (buf != NULL) {
 		vmaDestroyBuffer(gRenderer->vma, buf->buf, buf->mem);
-		free(buf);
+		free((void *)buf);
 	}
 }

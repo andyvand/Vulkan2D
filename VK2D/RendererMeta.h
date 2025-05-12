@@ -48,6 +48,7 @@ void _vk2dRendererGetSurfaceSize();
 void _vk2dRendererCreateDebug();
 void _vk2dRendererDestroyDebug();
 void _vk2dRendererCreateWindowSurface();
+void _vk2dRendererCreateWindowSurfaceWX();
 void _vk2dRendererDestroyWindowSurface();
 void _vk2dRendererCreateSwapchain();
 void _vk2dRendererDestroySwapchain();
@@ -80,6 +81,7 @@ void _vk2dRendererDestroyUnits();
 void _vk2dRendererRefreshTargets();
 void _vk2dRendererDestroyTargetsList();
 void _vk2dRendererResetSwapchain();
+void _vk2dRendererResetSwapchainWX();
 
 /****************************** Back-end Drawing ******************************/
 

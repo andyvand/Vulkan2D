@@ -36,7 +36,17 @@
 
 #pragma once
 #include <math.h>
+
+#ifndef __APPLE__
 #include <malloc.h>
+#else
+#include <sys/cdefs.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <malloc/_malloc.h>
+#include <malloc/malloc.h>
+#include <memory.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {

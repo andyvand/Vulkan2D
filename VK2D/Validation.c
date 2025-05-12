@@ -2,6 +2,7 @@
 /// \author Paolo Mazzon
 #include "VK2D/Validation.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <inttypes.h>
 #include <stdarg.h>

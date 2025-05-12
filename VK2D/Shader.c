@@ -8,7 +8,17 @@
 #include "VK2D/DescriptorControl.h"
 #include "VK2D/Util.h"
 #include "VK2D/Opaque.h"
+
+#ifndef __APPLE__
 #include <malloc.h>
+#else
+#include <sys/cdefs.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <malloc/_malloc.h>
+#include <malloc/malloc.h>
+#include <memory.h>
+#endif
 
 void _vk2dRendererAddShader(VK2DShader shader);
 void _vk2dRendererRemoveShader(VK2DShader shader);

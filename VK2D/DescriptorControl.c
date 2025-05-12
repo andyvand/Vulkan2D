@@ -9,7 +9,17 @@
 #include "VK2D/Initializers.h"
 #include "VK2D/LogicalDevice.h"
 #include "VK2D/Opaque.h"
+
+#ifndef __APPLE__
 #include <malloc.h>
+#else
+#include <sys/cdefs.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <malloc/_malloc.h>
+#include <malloc/malloc.h>
+#include <memory.h>
+#endif
 
 // Places another descriptor pool at the end of a given desc con's list, extending the list if need be
 static void _vk2dDescConAppendList(VK2DDescCon descCon) {

@@ -7,7 +7,17 @@
 #include "VK2D/Opaque.h"
 #include "VK2D/Util.h"
 #include "VK2D/Renderer.h"
+
+#ifndef __APPLE__
 #include <malloc.h>
+#else
+#include <sys/cdefs.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <malloc/_malloc.h>
+#include <malloc/malloc.h>
+#include <memory.h>
+#endif
 
 VK2DLogicalDevice gDeviceFromMainThread;
 

@@ -19,6 +19,22 @@
 #include "VK2D/DescriptorBuffer.h"
 #include "VK2D/Opaque.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <vulkan/vulkan_win32.h>
+#elif defined(__APPLE__)
+#include <vulkan/vulkan_macos.h>
+#else
+#include <xcb.h>
+#include <vulkan/vulkan_wayland.h>
+#include <vulkan/vulkan_xcb.h>
+
+#ifdef __linux__
+#include <gtk/gtk.h>
+#include <gdk/gdk.h>
+#endif
+#endif
+
 // For debugging
 PFN_vkCreateDebugReportCallbackEXT fvkCreateDebugReportCallbackEXT;
 PFN_vkDestroyDebugReportCallbackEXT fvkDestroyDebugReportCallbackEXT;
@@ -351,6 +367,66 @@ void _vk2dRendererCreateWindowSurface() {
             vk2dRaise(VK2D_STATUS_VULKAN_ERROR | VK2D_STATUS_SDL_ERROR, "Failed to create surface, SDL error: %s.", SDL_GetError());
         }
 	}
+}
+
+void _vk2dRendererCreateWindowSurfaceWX() {
+    VK2DRenderer gRenderer = vk2dRendererGetPointer();
+    if (gRenderer != NULL) {
+        // Create the surface then load up surface relevant values
+#ifdef _WIN32
+        VkWin32SurfaceCreateInfoKHR createInfo;
+        createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+        createInfo.hwnd = gRenderer->window;
+        createInfo.hinstance = GetModuleHandle(nullptr);
+        if (vkCreateWin32SurfaceKHR(gRenderer->vk, &createInfo, VK_NULL_HANDLE, &gRenderer->surface))
+#elif defined(__APPLE__)
+        VkMacOSSurfaceCreateInfoMVK createInfo;
+        createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
+        createInfo.pView = gRenderer->window;
+        if (vkCreateMacOSSurfaceMVK(gRenderer->vk, &createInfo, VK_NULL_HANDLE, &gRenderer->surface)) {
+#else
+        VkResult resultc = 0;
+        VkXcbSurfaceCreateInfoKHR createInfo;
+        VkWaylandSurfaceCreateInfoKHR createInfo2;
+        if (GDK_IS_WAYLAND_WINDOW(window)) {
+            createInfo2.surface = gdk_wayland_window_get_wl_surface(gdk_window_get_display(gRenderer->window));
+            createInfo2.display = gdk_wayland_display_get_wl_display(gRenderer->window);
+            resultc = vkCreateWaylandSurfaceKHR(gRenderer->vk, &createInfo2, VK_NULL_HANDLE, &gRenderer->surface)
+        } else {
+            int screen = 0;
+            createInfo.window = GDK_WINDOW_XID(gRenderer->window);
+            createInfo.connection = xcb_connect(NULL, &screen);
+            resultc = vkCreateXcbSurfaceKHR(gRenderer->vk, &createInfo, VK_NULL_HANDLE, &gRenderer->surface)
+        }
+
+        if (resultc) {
+#endif
+            VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(gRenderer->pd->dev, gRenderer->surface, &gRenderer->presentModeCount, VK_NULL_HANDLE);
+            if (result != VK_SUCCESS) {
+                vk2dRaise(VK2D_STATUS_VULKAN_ERROR, "Failed to get present modes, Vulkan error %i.", result);
+                return;
+            }
+            gRenderer->presentModes = malloc(sizeof(VkPresentModeKHR) * gRenderer->presentModeCount);
+
+            if (gRenderer->presentModes) {
+                result = vkGetPhysicalDeviceSurfacePresentModesKHR(gRenderer->pd->dev, gRenderer->surface, &gRenderer->presentModeCount, gRenderer->presentModes);
+                VkResult result2 = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gRenderer->pd->dev, gRenderer->surface, &gRenderer->surfaceCapabilities);
+                if (result != VK_SUCCESS || result2 != VK_SUCCESS) {
+                    vk2dRaise(VK2D_STATUS_VULKAN_ERROR, "Failed to get present modes, Vulkan error %i/%i.", result, result2);
+                    return;
+                }
+
+                // You may want to search for a different format, but according to the Vulkan hardware database, 100% of systems support VK_FORMAT_B8G8R8A8_SRGB
+                gRenderer->surfaceFormat.format = VK_FORMAT_B8G8R8A8_SRGB;
+                gRenderer->surfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+                _vk2dRendererGetSurfaceSize();
+            } else {
+                vk2dRaise(VK2D_STATUS_OUT_OF_RAM, "Failed to allocate %i present modes.", gRenderer->presentModeCount);
+            }
+        } else {
+            vk2dRaise(VK2D_STATUS_VULKAN_ERROR | VK2D_STATUS_SDL_ERROR, "Failed to create surface, SDL error: %s.", SDL_GetError());
+        }
+    }
 }
 
 void _vk2dRendererDestroyWindowSurface() {
@@ -1415,6 +1491,57 @@ void _vk2dRendererResetSwapchain() {
         vk2dLog("Recreated swapchain assets...");
 }
 
+void _vk2dRendererResetSwapchainWX() {
+    VK2DRenderer gRenderer = vk2dRendererGetPointer();
+    if (vk2dStatusFatal())
+        return;
+
+    VkResult result = vkDeviceWaitIdle(gRenderer->ld->dev);
+    if (result == VK_ERROR_OUT_OF_HOST_MEMORY) {
+        vk2dRaise(VK2D_STATUS_OUT_OF_RAM,"Out of memory.");
+        return;
+    } else if (result == VK_ERROR_OUT_OF_DEVICE_MEMORY) {
+        vk2dRaise(VK2D_STATUS_OUT_OF_VRAM, "Out of video memory.");
+        return;
+    } else if (result == VK_ERROR_DEVICE_LOST) {
+        vk2dRaise(VK2D_STATUS_DEVICE_LOST, "Device lost on wait.");
+        return;
+    }
+
+    // Free swapchain
+    _vk2dRendererDestroySynchronization();
+    _vk2dRendererDestroySampler();
+    _vk2dRendererDestroyDescriptorPool(true);
+    _vk2dRendererDestroyUniformBuffers();
+    _vk2dRendererDestroyFrameBuffer();
+    _vk2dRendererDestroyPipelines(true);
+    _vk2dRendererDestroyRenderPass();
+    _vk2dRendererDestroyDepthBuffer();
+    _vk2dRendererDestroyColourResources();
+    _vk2dRendererDestroySwapchain();
+
+    vk2dLog("Destroyed swapchain assets...");
+
+    // Swap out configs in case they were changed
+    gRenderer->config = gRenderer->newConfig;
+
+    // Restart swapchain
+    _vk2dRendererGetSurfaceSize();
+    _vk2dRendererCreateSwapchain();
+    _vk2dRendererCreateColourResources();
+    _vk2dRendererCreateDepthBuffer();
+    _vk2dRendererCreateRenderPass();
+    _vk2dRendererCreatePipelines();
+    _vk2dRendererCreateFrameBuffer();
+    _vk2dRendererCreateDescriptorPool(true);
+    _vk2dRendererCreateUniformBuffers(false);
+    _vk2dRendererCreateSampler();
+    _vk2dRendererRefreshTargets();
+    _vk2dRendererCreateSynchronization();
+
+    if (!vk2dStatusFatal())
+        vk2dLog("Recreated swapchain assets...");
+}
 
 void _vk2dRendererDrawRaw(VkDescriptorSet *sets, uint32_t setCount, VK2DPolygon poly, VK2DPipeline pipe, float x, float y, float xscale, float yscale, float rot, float originX, float originY, float lineWidth, float xInTex, float yInTex, float texWidth, float texHeight, VK2DCameraIndex cam) {
     VK2DRenderer gRenderer = vk2dRendererGetPointer();

@@ -7,6 +7,17 @@
 #include "VK2D/Constants.h"
 #include "VK2D/Renderer.h"
 
+#ifndef __APPLE__
+#include <malloc.h>
+#else
+#include <sys/cdefs.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <malloc/_malloc.h>
+#include <malloc/malloc.h>
+#include <memory.h>
+#endif
+
 // From Math.h
 void identityMatrix(float m[]);
 void scaleMatrix(float m[], float v[]);

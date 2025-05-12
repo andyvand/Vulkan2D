@@ -6,6 +6,17 @@
 #include <stdio.h>
 #include <math.h>
 
+#ifndef __APPLE__
+#include <malloc.h>
+#else
+#include <sys/cdefs.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <malloc/_malloc.h>
+#include <malloc/malloc.h>
+#include <memory.h>
+#endif
+
 #include "VK2D/RendererMeta.h"
 #include "VK2D/Renderer.h"
 #include "VK2D/Validation.h"
@@ -46,7 +57,7 @@ static VK2DStartupOptions DEFAULT_STARTUP_OPTIONS = {
 
 /******************************* User-visible functions *******************************/
 
-VK2DResult vk2dRendererInit(SDL_Window *window, VK2DRendererConfig config, VK2DStartupOptions *options) {
+VK2DResult vk2dRendererInit(void *window, VK2DRendererConfig config, VK2DStartupOptions *options) {
 	gRenderer = calloc(1, sizeof(struct VK2DRenderer_t));
 	VK2DResult errorCode = VK2D_SUCCESS;
 	uint32_t i, sdlExtensionsCount;
